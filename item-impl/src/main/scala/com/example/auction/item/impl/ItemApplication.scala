@@ -2,6 +2,7 @@ package com.example.auction.item.impl
 
 import com.example.auction.bidding.api.BiddingService
 import com.example.auction.item.api.ItemService
+import com.example.auction.item.impl.monitor.{EntityInspectionComponent, EntityInspectionService}
 import com.lightbend.lagom.scaladsl.api.ServiceLocator
 import com.lightbend.lagom.scaladsl.api.ServiceLocator.NoServiceLocator
 import com.lightbend.lagom.scaladsl.broker.kafka.LagomKafkaComponents
@@ -15,7 +16,8 @@ import play.api.Environment
 import scala.concurrent.ExecutionContext
 
 trait ItemComponents extends LagomServerComponents
-  with CassandraPersistenceComponents {
+  with CassandraPersistenceComponents
+  with EntityInspectionComponent {
 
   implicit def executionContext: ExecutionContext
   def environment: Environment
@@ -27,6 +29,17 @@ trait ItemComponents extends LagomServerComponents
   lazy val jsonSerializerRegistry = ItemSerializerRegistry
 
   persistentEntityRegistry.register(wire[ItemEntity])
+
+  lazy val entityInspectionService = {
+
+    inspectEntityCommandRegistry.registerInspectionHandler(wire[ItemEntity], InspectItem) {
+      case (registry, entityId, x@InspectItem) => registry.refFor[ItemEntity](entityId).ask(x)
+    }
+
+    wire[EntityInspectionService]
+  }
+
+
   readSide.register(wire[ItemEventProcessor])
 }
 
