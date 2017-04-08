@@ -2,10 +2,13 @@ package com.example.auction.item.impl
 
 import java.util.UUID
 
+import akka.NotUsed
 import akka.persistence.query.Offset
 import com.datastax.driver.core.utils.UUIDs
 import com.example.auction.item.api.ItemService
 import com.example.auction.item.api
+import com.example.auction.item.api.monitor.PersistentEntityStateDto
+import com.example.auction.item.impl.monitor.EntityInspectionService
 import com.example.auction.security.ServerSecurity._
 import com.lightbend.lagom.scaladsl.api.ServiceCall
 import com.lightbend.lagom.scaladsl.api.transport.{Forbidden, NotFound}
@@ -15,7 +18,8 @@ import com.lightbend.lagom.scaladsl.server.ServerServiceCall
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ItemServiceImpl(registry: PersistentEntityRegistry, itemRepository: ItemRepository)(implicit ec: ExecutionContext) extends ItemService {
+class ItemServiceImpl(registry: PersistentEntityRegistry, itemRepository: ItemRepository,
+                      entityInspectionService: EntityInspectionService)(implicit ec: ExecutionContext) extends ItemService {
 
   private val DefaultPageSize = 10
 
@@ -113,4 +117,15 @@ class ItemServiceImpl(registry: PersistentEntityRegistry, itemRepository: ItemRe
 
   private def entityRefString(itemId: String) = registry.refFor[ItemEntity](itemId)
 
+  override def getEntityNames(): ServiceCall[NotUsed, Seq[String]] = ServerServiceCall { _ =>
+    entityInspectionService.getEntityNames
+  }
+
+  override def inspectEntity(entityName: String,
+                             entityId: String,
+                             from: Option[Long],
+                             to: Option[Long]): ServiceCall[NotUsed, PersistentEntityStateDto] = ServerServiceCall { _ =>
+
+    entityInspectionService.inspectEntity(entityName, entityId, from, to)
+  }
 }

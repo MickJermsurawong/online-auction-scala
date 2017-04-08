@@ -3,13 +3,14 @@ package com.example.auction.item.api
 import java.util.UUID
 
 import akka.{Done, NotUsed}
+import com.example.auction.item.api.monitor.InspectingEntityServiceCall
 import com.example.auction.security.SecurityHeaderFilter
 import com.example.auction.utils.PaginatedSequence
 import com.lightbend.lagom.scaladsl.api.broker.Topic
 import com.lightbend.lagom.scaladsl.api.transport.Method
 import com.lightbend.lagom.scaladsl.api.{Service, ServiceCall}
 
-trait ItemService extends Service {
+trait ItemService extends Service with InspectingEntityServiceCall {
   /**
     * Create an item.
     *
@@ -56,7 +57,11 @@ trait ItemService extends Service {
       pathCall("/api/item", createItem),
       restCall(Method.POST, "/api/item/:id/start", startAuction _),
       pathCall("/api/item/:id", getItem _),
-      pathCall("/api/item?userId&status&pageNo&pageSize", getItemsForUser _)
+      pathCall("/api/item?userId&status&pageNo&pageSize", getItemsForUser _),
+
+      restCallGetEntityNames("item"),
+      restCallInspectEntity("item")
+
     ).withTopics(
       topic("item-ItemEvent", this.itemEvents)
     ).withHeaderFilter(SecurityHeaderFilter.Composed)
