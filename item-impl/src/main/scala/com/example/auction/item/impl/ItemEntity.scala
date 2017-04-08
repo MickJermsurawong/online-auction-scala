@@ -4,19 +4,20 @@ import java.time.{Duration, Instant}
 import java.util.UUID
 
 import akka.Done
+import com.example.auction.item.impl.monitor.ces.{InspectEntityStateCmd, InspectableEntity}
 import com.lightbend.lagom.scaladsl.persistence.PersistentEntity.ReplyType
 import com.lightbend.lagom.scaladsl.persistence.{AggregateEvent, AggregateEventTag, PersistentEntity}
 import play.api.libs.json.{Format, Json}
 import com.example.auction.utils.JsonFormats._
 
-class ItemEntity extends PersistentEntity {
+class ItemEntity extends PersistentEntity with InspectableEntity {
   override type Command = ItemCommand
   override type Event = ItemEvent
   override type State = Option[Item]
 
   override def initialState: Option[Item] = None
 
-  override def behavior: Behavior = {
+  override def behavior: Behavior = inspection[InspectItem.type] {
     case None => notCreated
     case Some(item) if item.status == ItemStatus.Created => created(item)
     case Some(item) if item.status == ItemStatus.Auction => auction(item)
@@ -170,6 +171,10 @@ object FinishAuction {
   implicit val format: Format[FinishAuction] = Json.format
 }
 
+case object InspectItem extends ItemCommand with InspectEntityStateCmd {
+  implicit val format: Format[InspectItem.type] = singletonFormat(InspectItem)
+}
+
 sealed trait ItemEvent extends AggregateEvent[ItemEvent] {
   override def aggregateTag = ItemEvent.Tag
 }
@@ -202,3 +207,4 @@ case class AuctionFinished(winner: Option[UUID], price: Option[Int]) extends Ite
 object AuctionFinished {
   implicit val format: Format[AuctionFinished] = Json.format
 }
+
